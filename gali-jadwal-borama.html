@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gali Jadwalka Borama</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f1420; color: #e8ecf4; margin: 0; padding: 20px; }
+  h1 { font-size: 20px; color: #ffb703; }
+  p { font-size: 14px; color: #9aa4b8; line-height: 1.5; }
+  button { width: 100%; padding: 16px; font-size: 17px; font-weight: 700; border: none; border-radius: 12px; background: #ffb703; color: #1a1a2e; cursor: pointer; }
+  button:disabled { opacity: 0.5; }
+  #log { margin-top: 16px; font-size: 13px; font-family: Menlo, monospace; background: #171e2e; border-radius: 10px; padding: 12px; white-space: pre-wrap; word-break: break-word; min-height: 60px; }
+  .ok { color: #4ade80; }
+  .bad { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>📋 Jadwalka Borama → Staff Manager</h1>
+<p>Badhankan riix si jadwalka toddobaadlaha ah ee Branch 2 (Sabti–Khamiis, 4 shaqaale) loogu shubo Supabase. <b>Ogow:</b> hawlaha toddobaadle ee hore ee Branch 2 wuu beddelayaa.</p>
+<button id="btn" onclick="galiJadwal()">GALI JADWALKA (24 diiwaan)</button>
+<div id="log">Diyaar...</div>
+
+<script>
+var SB_URL = 'https://prlfayottmrboungrttt.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBybGZheW90dG1yYm91bmdydHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NDgyNDgsImV4cCI6MjA5NjAyNDI0OH0.O7fpDiP009br3_ioK2_v0MjMSTKmJtaJEUE88lS_3YI';
+var BRANCH = 'Branch 2 - Borama';
+
+var STAFF = {
+  'C/Aasis Maxamed': 4,
+  'Axmed Ismaaciil': 3,
+  'Xamse Maxamuud': 12,
+  'C/Rashiid Xasan': 13
+};
+
+function T(text, sec) { return { text: text, section: sec, status: 'yellow', target: 0 }; }
+
+var JADWAL = {
+  'Sabti': {
+    'C/Aasis Maxamed': [
+      T('Hagida iyo hubinta hawlaha maalinlaha (maalinta oo dhan)', 'horre'),
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Qiimaynta alaabta go\'an iyo dalabaadkooda', 'horre'),
+      T('Booqashada xafiisyada shirkadaha dhismaha', 'dambe'),
+      T('Xisaab xidhka maalinlaha', 'dambe'),
+      T('Hubinta alaabta meherada', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Soo gudbinta engineerada mudo inala macaamilin (ugu yaraan 10 engineer)', 'horre'),
+      T('Diiwaan galinta alaabaha inaga go\'an iyo kuwa suuqa looga baahan yahay (maalinta oo dhan)', 'horre'),
+      T('Booqashada goobaha ay ka socdaan dhismayaashu', 'horre'),
+      T('Garaacista masuuliyiinta dhismayaasha saaka soo martay', 'dambe')
+    ],
+    'Xamse Maxamuud': [
+      T('Dhaqdhaqaajinta iyo socodsiinta Facebook page-ka', 'dambe'),
+      T('Suuq gaynta magaca Hansan Electric Company', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Nadiifinta meherada tafaariiqda', 'horre'),
+      T('Tirinta alaabta meherada', 'horre'),
+      T('Suuq gaynta tukuumada', 'dambe')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe')
+    ]
+  },
+  'Axad': {
+    'C/Aasis Maxamed': [
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Garaacista engineerada la soo maray goobahooda dhisme toddobaadkii hore & shalay', 'horre'),
+      T('Garaacista laydhlayaasha gacanta ku haya dhismayaasha la soo maray toddobaadkii hore & shalay', 'horre'),
+      T('Kafikirka fursado cusub iyo farsamooyin suuq gayn', 'horre'),
+      T('Xisaab xidhka maalinlaha', 'dambe'),
+      T('Hormarinta xirfadda xisaabaadka iyo suuq gaynta', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Garaacista xirfadlayaasha sameeya jibsinka', 'horre'),
+      T('Diiwaan galinta alaabaha go\'an iyo kuwa suuqa looga baahan yahay (maalinta oo dhan)', 'horre')
+    ],
+    'Xamse Maxamuud': [
+      T('Suuq gaynta bakhaarada iyo supermarket-yada', 'horre'),
+      T('Diiwaan galinta alaabaha jumlad ahaan inaga go\'an ee suuqa loogu baahi badan yahay', 'horre'),
+      T('Raadinta suuq cusub oo magaalooyinka kale ah', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Nadiifinta meherada tafaariiqda', 'horre'),
+      T('Suuq gaynta tukuumada', 'dambe')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe')
+    ]
+  },
+  'Isniin': {
+    'C/Aasis Maxamed': [
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Hagida iyo hubinta hawlaha maalinlaha', 'horre'),
+      T('Booqashada hotelada iyo dhakhtarada', 'horre'),
+      T('Xisaab xidhka maalinlaha', 'dambe'),
+      T('Booqashada xafiisyada shirkadaha dhismaha', 'dambe'),
+      T('Hubinta alaabta meherada', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Garaacista laydhlayaasha', 'horre'),
+      T('Diiwaan galinta alaabaha inaga go\'an iyo kuwa suuqa looga baahan yahay (maalinta oo dhan)', 'horre'),
+      T('Booqashada goobaha dhismuhu ka socdo', 'horre'),
+      T('Garaacista engineerada mudo inala macaamilin (ugu yaraan 10 engineer)', 'dambe')
+    ],
+    'Xamse Maxamuud': [
+      T('Kadabo tagista macaamiisha loo adeegay toddobaadkii hore (laydhlayaasha iyo engineerada)', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Nadiifinta meherada tafaariiqda', 'horre'),
+      T('Tirinta alaabta meherada', 'horre'),
+      T('Suuq gaynta tukuumada', 'dambe')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe')
+    ]
+  },
+  'Talaado': {
+    'C/Aasis Maxamed': [
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Garaacista engineerada la soo maray goobahooda dhisme toddobaadkii hore & shalay', 'horre'),
+      T('Garaacista laydhlayaasha gacanta ku haya dhismayaasha la soo maray toddobaadkii hore & shalay', 'horre'),
+      T('Xisaab xidhka maalinlaha', 'dambe'),
+      T('Kafikirka fursado cusub iyo farsamooyin suuq gayn', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Soo gudbinta engineerada mudo inala macaamilin (ugu yaraan 10 engineer)', 'horre'),
+      T('Diiwaan galinta alaabaha inaga go\'an iyo kuwa suuqa looga baahan yahay (maalinta oo dhan)', 'horre')
+    ],
+    'Xamse Maxamuud': [
+      T('Suuq gaynta bakhaarada, supermarket-yada iyo electronics-ka', 'horre'),
+      T('Diiwaan galinta alaabaha jumlad ahaan inaga go\'an ee suuqa loogu baahi badan yahay', 'horre'),
+      T('Suuq gaynta magaca Hansan Electric Company', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Nadiifinta meherada tafaariiqda', 'horre'),
+      T('Suuq gaynta tukuumada', 'dambe')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe')
+    ]
+  },
+  'Arbaco': {
+    'C/Aasis Maxamed': [
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Tirinta iyo hubinta alaabta', 'horre'),
+      T('Hubinta records-ka iibka', 'dambe'),
+      T('Xisaab xidhka maalinlaha', 'dambe'),
+      T('Hormarinta xisaabaadka iyo suuq gaynta', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Garaacista laydhlayaasha mudo inala macaamilin', 'horre'),
+      T('Diiwaan galinta alaabaha inaga go\'an iyo kuwa suuqa looga baahan yahay (maalinta oo dhan)', 'horre')
+    ],
+    'Xamse Maxamuud': [
+      T('Suuq gaynta bakhaarada iyo supermarket-yada', 'horre'),
+      T('Dhaqdhaqaajinta iyo socodsiinta Facebook page-ka', 'dambe'),
+      T('Raadinta fursado cusub iyo farsamooyin suuq gayn', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Tirinta alaabaha meherada tafaariiqda', 'horre'),
+      T('Nadiifinta alaabta bakhaarka', 'dambe')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe')
+    ]
+  },
+  'Khamiis': {
+    'C/Aasis Maxamed': [
+      T('Soo gudbinta sales targetka', 'horre'),
+      T('Dib u eegista qorshihii toddobaadka', 'horre'),
+      T('Xisaab xidhka maalinlaha', 'dambe')
+    ],
+    'Axmed Ismaaciil': [
+      T('Soo gudbinta dhammaan waxqabadkiisii toddobaadka', 'horre')
+    ],
+    'Xamse Maxamuud': [
+      T('Soo gudbinta dhammaan waxqabadkiisii toddobaadka', 'horre'),
+      T('Ka war doonida macaamiishii ballamahoodu dib u dhaceen', 'dambe')
+    ],
+    'C/Rashiid Xasan': [
+      T('Soo gudbinta dhammaan waxqabadkiisii toddobaadka', 'horre')
+    ],
+    'DHAMAAN': [
+      T('Garaacista iyo soo ururinta daymaha', 'dambe'),
+      T('Soo gudbinta caqabadaha soo wajahay toddobaadka iyo xal haddaad u hayso', 'dambe')
+    ]
+  }
+};
+
+function addLog(msg, cls) {
+  var el = document.getElementById('log');
+  var line = document.createElement('div');
+  if (cls) { line.className = cls; }
+  line.textContent = msg;
+  el.appendChild(line);
+}
+
+async function galiJadwal() {
+  var btn = document.getElementById('btn');
+  btn.disabled = true;
+  document.getElementById('log').textContent = '';
+  addLog('Waa la bilaabay...');
+  var days = Object.keys(JADWAL);
+  var ok = 0, fail = 0;
+  for (var d = 0; d < days.length; d++) {
+    var day = days[d];
+    var dayPlan = JADWAL[day];
+    var shared = dayPlan['DHAMAAN'] || [];
+    var names = Object.keys(STAFF);
+    for (var n = 0; n < names.length; n++) {
+      var name = names[n];
+      var staffId = STAFF[name];
+      var own = dayPlan[name] || [];
+      var tasks = own.concat(JSON.parse(JSON.stringify(shared)));
+      var rowId = (BRANCH + '_' + staffId + '_tasks_' + day).replace(/[^a-zA-Z0-9_-]/g, '_');
+      var body = {
+        id: rowId, branch: BRANCH, staff_id: staffId,
+        data_type: 'tasks', day_key: day,
+        data: JSON.stringify(tasks),
+        updated_at: new Date().toISOString()
+      };
+      try {
+        var res = await fetch(SB_URL + '/rest/v1/staff_data', {
+          method: 'POST',
+          headers: {
+            'apikey': SB_KEY,
+            'Authorization': 'Bearer ' + SB_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify(body)
+        });
+        if (res.ok) { ok++; addLog('OK  ' + day + ' - ' + name + ' (' + tasks.length + ' hawlood)', 'ok'); }
+        else { fail++; addLog('KHALAD ' + day + ' - ' + name + ': ' + res.status, 'bad'); }
+      } catch (e) { fail++; addLog('KHALAD ' + day + ' - ' + name + ': ' + e.message, 'bad'); }
+    }
+  }
+  addLog('============================');
+  addLog('DHAMMAAD: ' + ok + ' guul, ' + fail + ' khalad.', fail === 0 ? 'ok' : 'bad');
+  addLog('Hadda fur Staff Manager-ka oo refresh garee.');
+  btn.disabled = false;
+  btn.textContent = 'DIB U GALI (haddii loo baahdo)';
+}
+
+window.onload = function() {};
+</script>
+</body>
+</html>
