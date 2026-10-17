@@ -16475,6 +16475,49 @@ try {
   }
 } catch(e) {}
 
+// ===== AUTO-UPDATE: app-ku wuxuu GitHub ka hubiyaa version cusub; haddii la helo, si toos ah ayuu isu cusbooneysiiyaa =====
+var APP_BUILD = '2026-10-17a';
+(function(){
+  var RE = new RegExp("var APP_" + "BUILD = '([0-9a-z-]+)'");
+  var checking = false, pendingBuild = null;
+  function busy() {
+    try {
+      var a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable) && String(a.value || a.textContent || '').length) return true;
+      if (document.querySelector('.modal-overlay.open, .ovl.open, .fp-screen.open, #kiosk-overlay.open, #ai-multi-card')) return true;
+      if (typeof sbOutboxCount === 'function' && sbOutboxCount() > 0 && navigator.onLine) return true;
+    } catch (e) {}
+    return false;
+  }
+  async function applyUpdate(build) {
+    try { if (sessionStorage.getItem('hs_upd_tried') === build) return; sessionStorage.setItem('hs_upd_tried', build); } catch (e) {}
+    try { if (window.caches) { var ks = await caches.keys(); await Promise.all(ks.map(function(k){ return caches.delete(k); })); } } catch (e) {}
+    try { if (navigator.serviceWorker) { var rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(function(r){ return r.update().catch(function(){}); })); } } catch (e) {}
+    var u = new URL(location.href); u.searchParams.set('v', build);
+    location.replace(u.toString());
+  }
+  async function checkUpdate() {
+    if (checking || !navigator.onLine || location.protocol.indexOf('http') !== 0) return;
+    checking = true;
+    try {
+      var r = await fetch(location.pathname + '?_vc=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      var m = (await r.text()).match(RE);
+      if (!m || m[1] === APP_BUILD) return;
+      if (busy()) {
+        if (pendingBuild !== m[1]) { pendingBuild = m[1]; try { showToast('🔄 Nooc cusub ayaa diyaar ah — wuxuu furmi doonaa marka aad dhammeyso'); } catch (e) {} }
+        return;
+      }
+      await applyUpdate(m[1]);
+    } catch (e) {} finally { checking = false; }
+  }
+  window.checkAppUpdate = checkUpdate;
+  window.addEventListener('load', function(){ setTimeout(checkUpdate, 2500); });
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkUpdate(); });
+  window.addEventListener('online', checkUpdate);
+  setInterval(checkUpdate, 3 * 60 * 1000);
+})();
+
 // P4-PATCH: dhererka bottom nav (1 ama 2 saf) → padding-ka bogga si xogta hoose aysan nav-ka uga qarsoomin
 function syncBottomNavHeight() {
   try {
