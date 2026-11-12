@@ -4472,9 +4472,15 @@ function importDebtCSVOps(input) {
 function importDebtCSV(input, forceBranch) {
   const file = input.files[0];
   if (!file) return;
+  // CSV-GUARD: kaliya fayl qoraal ah (.csv/.txt) — Excel/sawir/PDF waxay keenayeen magacyo qasan
+  if (!/\.(csv|txt)$/i.test(file.name || '') || (file.type && !/^text\/|csv|^$/i.test(file.type))) {
+    showToast('\u274C Kaliya fayl .csv ah dooro (Excel/sawir ma shaqeeyo)'); input.value = ''; return;
+  }
   const reader = new FileReader();
   reader.onload = e => {
     const text = e.target.result;
+    input.value = '';
+    if (_txtGarbled(text.substring(0, 4000)) || text.indexOf('\uFFFD') >= 0) { showToast('\u274C Faylkan ma aha CSV sax ah \u2014 waa la diiday'); return; }
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
     if (lines.length < 2) { showToast('❌ CSV empty'); return; }
 
@@ -4507,8 +4513,8 @@ function importDebtCSV(input, forceBranch) {
       if (cols.length < 2) return;
       const customer = cols[0];
       const amount = parseFloat(cols[1]) || 0;
-      const dateStr = cols[2] || dk;
-      if (!customer || amount <= 0) return;
+      const dateStr = _promiseOk(cols[2]) ? cols[2] : '';
+      if (!customer || amount <= 0 || _txtGarbled(customer)) return;
       var _ck = debtDupKey(customer, amount);
       if (!_csvAddDup && (_csvKeys[_ck] || debtFindDup(branch, customer, amount).length)) return;
       _csvKeys[_ck] = 1;
