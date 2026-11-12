@@ -1544,6 +1544,7 @@
     </label>
     <button class="save-btn" style="margin:0 0 12px;background:rgba(37,99,235,0.12);color:var(--accent);border:1px solid var(--accent)" onclick="openCustAgent('dayn')">👥 Customer Agent — Macaamiisha Daynta</button>
     <button class="save-btn" id="debt-dup-btn-ops" style="margin:0 0 12px;display:none;background:rgba(220,38,38,0.08);color:var(--red);border:1px solid var(--red)" onclick="openDebtDupClean()">🧹 Ka saar nuqulada (magac + lacag isku mid)</button>
+    <button class="save-btn" id="debt-garb-btn-ops" style="margin:0 0 12px;display:none;background:rgba(245,158,11,0.10);color:#b45309;border:1px solid #f59e0b" onclick="debtCleanGarbled()">🧽 Nadiifi xogta khaldan</button>
     <div id="ops-debts-container"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;margin-bottom:20px">
       <button class="save-btn" style="background:rgba(0,176,80,0.2);color:var(--green);border:1px solid var(--green)" onclick="exportOpsCSV()">📥 CSV</button>
@@ -2300,6 +2301,7 @@
     <button class="add-task-btn" style="margin-bottom:12px;width:100%;justify-content:center;font-size:14px;padding:14px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff" onclick="openQdebt()">⚡ Galitaan Degdeg (badan)</button>
     <button class="save-btn" style="margin:0 0 12px;background:rgba(37,99,235,0.12);color:var(--accent);border:1px solid var(--accent)" onclick="openCustAgent('dayn')">👥 Customer Agent — Macaamiisha Daynta</button>
     <button class="save-btn" id="debt-dup-btn-branch" style="margin:0 0 12px;background:rgba(220,38,38,0.08);color:var(--red);border:1px solid var(--red)" onclick="openDebtDupClean()">🧹 Ka saar nuqulada (magac + lacag isku mid)</button>
+    <button class="save-btn" id="debt-garb-btn-branch" style="margin:0 0 12px;display:none;background:rgba(245,158,11,0.10);color:#b45309;border:1px solid #f59e0b" onclick="debtCleanGarbled()">🧽 Nadiifi xogta khaldan</button>
     <div id="branch-debts-container" style="margin-bottom:12px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <button class="save-btn" style="background:rgba(0,176,80,0.15);color:var(--green);border:1px solid var(--green)" onclick="exportDebtCSV()">📥 CSV Export</button>
@@ -5611,6 +5613,46 @@ function _debtDupAsk(name, amount, found, label) {
     }).join('\n') +
     '\n\nOK = KU DAR (waa dayn cusub)\nCancel = KA DAA (waa nuqul)';
   return confirm(msg);
+}
+// GARBLE-CLEAN: magac qasan → tirtir; ballan/qoraal qasan (magac sax) → kaliya la nadiifiyo
+function debtScanGarbled() {
+  var res = { n: 0, del: 0, fix: 0, amt: 0, days: [] };
+  _debtCleanBranches().forEach(function(br) {
+    var bd = debtData[br] || {};
+    Object.keys(bd).forEach(function(dk) {
+      var hit = false;
+      (bd[dk] || []).forEach(function(it) {
+        if (_txtGarbled(it.customer)) { res.del++; res.amt += Number(it.amount || 0); hit = true; }
+        else if ((it.promise && !_promiseOk(it.promise)) || _txtGarbled(it.recNote) || _txtGarbled(it.note)) { res.fix++; hit = true; }
+      });
+      if (hit) res.days.push({ br: br, dk: dk });
+    });
+  });
+  res.n = res.del + res.fix;
+  return res;
+}
+function debtCleanGarbled() {
+  if (!_debtCanClean()) { showToast('\uD83D\uDC41\uFE0F Aragti kaliya'); return; }
+  var r = debtScanGarbled();
+  if (!r.n) { showToast('\u2705 Xog khaldan lama helin'); return; }
+  if (!confirm(r.del + ' dayn oo magacoodu qasan yahay ($' + grandFmt(r.amt) + ') waa la tirtiri doonaa.\n' + r.fix + ' dayn oo magac sax ah: ballanta/qoraalka qasan kaliya ayaa laga saarayaa.\n\nTallaabadan lama soo celin karo. Ma hubtaa?')) return;
+  r.days.forEach(function(d) {
+    var arr = debtData[d.br][d.dk] || [];
+    var keep = [];
+    arr.forEach(function(it) {
+      if (_txtGarbled(it.customer)) return;
+      if (it.promise && !_promiseOk(it.promise)) it.promise = '';
+      if (_txtGarbled(it.recNote)) it.recNote = '';
+      if (_txtGarbled(it.note)) it.note = '';
+      keep.push(it);
+    });
+    arr.length = 0; Array.prototype.push.apply(arr, keep);
+    try { saveDebtsToDB(d.br, d.dk); } catch (e) {}
+  });
+  saveToLocalStorage();
+  try { renderOpsDebts(); } catch (e) {}
+  try { renderBranchDebts(); } catch (e) {}
+  showToast('\uD83E\uDDFD ' + r.del + ' la tirtiray \u00B7 ' + r.fix + ' la saxay');
 }
 function _debtCanClean() { try { return state.role === 'ops' || _isNaasir() || (state.role === 'branch' && !!state.branch); } catch (e) { return false; } }
 // Branch Manager: laantiisa oo keliya
@@ -11177,6 +11219,7 @@ function buildDebtBallanBlock(branches) {
   return h;
 }
 function renderOpsDebts() {
+  try { ['debt-garb-btn-ops','debt-garb-btn-branch'].forEach(function(_id){ var _gb = document.getElementById(_id); if (_gb) { var _gn = _debtCanClean() ? debtScanGarbled().n : 0; _gb.style.display = _gn ? '' : 'none'; _gb.textContent = '\uD83E\uDDFD Nadiifi xogta khaldan (' + _gn + ')'; } }); } catch (eGb) {}
   try { var _ddb = document.getElementById('debt-dup-btn-ops'); if (_ddb) _ddb.style.display = _debtCanClean() ? '' : 'none'; } catch (eDd) {}
   const container = document.getElementById('ops-debts-container');
   if (!container) return;
@@ -11255,8 +11298,8 @@ function debtRowHTML(it, bIdx, dayKey) {
   else if (col >= it.amount) { chip = '✅ Dhammays'; chipCol = 'var(--green)'; }
   else if (col > 0) { chip = '⚠️ Baaqi $' + grandFmt(baaqi); chipCol = 'var(--yellow)'; }
   else { chip = '❌ Lama qaadin'; chipCol = 'var(--red)'; }
-  let line2 = it.customer;
-  if (it.phone) line2 += ' · 📞 ' + it.phone;
+  let line2 = fqEsc(_custShow(it.customer));
+  if (it.phone) line2 += ' · 📞 ' + fqEsc(it.phone);
   let line3 = '';
   if (it.debtDate) {
     line3 += '📅 ' + it.debtDate;
@@ -11274,8 +11317,8 @@ function debtRowHTML(it, bIdx, dayKey) {
     if (it.collectedDate) line3 += ' (' + it.collectedDate + ')';
     line3 += ' · Baaqi: $' + grandFmt(baaqi);
   }
-  if (it.promise) line3 += (line3 ? ' · ' : '') + '🗓️ Ballan: ' + fmtPromise(it.promise);
-  if (it.recNote) line3 += (line3 ? ' · ' : '') + it.recNote;
+  if (it.promise) line3 += (line3 ? ' · ' : '') + '🗓️ Ballan: ' + (_promiseOk(it.promise) ? fmtPromise(it.promise) : '\u26A0\uFE0F khaldan');
+  if (it.recNote) line3 += (line3 ? ' · ' : '') + (_txtGarbled(it.recNote) ? '\u26A0\uFE0F qoraal khaldan' : fqEsc(it.recNote));
   var rowBranch = ALL_BRANCHES[bIdx];
   var canEdit = (state.role === 'ops') || (state.role === 'branch' && rowBranch === state.branch);
   var delBtn = canEdit
@@ -11283,8 +11326,8 @@ function debtRowHTML(it, bIdx, dayKey) {
     : '';
   return '<div onclick="openDebtRec(' + bIdx + ',' + it.id + ',\'' + _dk + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">' +
     '<div style="flex:1;min-width:0">' +
-    '<div style="font-size:12px;font-weight:700">' + it.staffName + '</div>' +
-    '<div style="font-size:11px;color:var(--muted)">' + line2 + '</div>' +
+    '<div style="font-size:12px;font-weight:700">' + fqEsc(it.staffName) + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);overflow-wrap:anywhere">' + line2 + '</div>' +
     (line3 ? '<div style="font-size:10px;color:var(--muted);margin-top:2px">' + line3 + '</div>' : '') +
     '</div>' +
     '<div style="text-align:right;flex-shrink:0">' +
@@ -13000,6 +13043,7 @@ function renderOpsCustomers() {
 }
 
 function renderBranchDebts() {
+  try { ['debt-garb-btn-ops','debt-garb-btn-branch'].forEach(function(_id){ var _gb = document.getElementById(_id); if (_gb) { var _gn = _debtCanClean() ? debtScanGarbled().n : 0; _gb.style.display = _gn ? '' : 'none'; _gb.textContent = '\uD83E\uDDFD Nadiifi xogta khaldan (' + _gn + ')'; } }); } catch (eGb) {}
   try { var _ddb2 = document.getElementById('debt-dup-btn-branch'); if (_ddb2) _ddb2.style.display = _debtCanClean() ? '' : 'none'; } catch (eDd2) {}
   const container = document.getElementById('branch-debts-container');
   if (!container) return;
